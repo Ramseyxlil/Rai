@@ -23,6 +23,10 @@ jobs:
         with:
           workspaces: "./src-tauri -> target"
 
+      - name: Fetch offline voice model
+        shell: pwsh
+        run: ./scripts/fetch-voice-model.ps1
+
       - name: Build Rai (and release on tags)
         uses: tauri-apps/tauri-action@v0
         env:

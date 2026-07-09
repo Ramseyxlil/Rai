@@ -147,3 +147,4 @@ svg{stroke-linecap:round;stroke-linejoin:round}
 ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:8px}
 .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink-2);border:1px solid var(--jade-line);color:var(--text);font-size:12.5px;padding:10px 16px;border-radius:11px;z-index:80;transition:.3s;pointer-events:none}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.ahints .vr.err{color:var(--live)}

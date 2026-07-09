@@ -24,7 +24,7 @@ async function boot(){
   seeScreen=!!settings.screen_by_default;
   document.documentElement.style.setProperty("--alpha",((settings.opacity||92)/100).toFixed(2));
   reflect();
-  preloadVoice();
+  loadVoice();
 }
 function reflect(){
   $("#eyeBtn").classList.toggle("on",invisible);
@@ -71,17 +71,52 @@ async function pushHistory(q,a){
   }catch{}
 }
 
-/* ---- free offline voice (vosk-browser), preloaded at launch ---- */
-const VOSK_MODEL_URL="https://ccoreilly.github.io/vosk-browser/models/vosk-model-small-en-us-0.15.tar.gz";
-let voskModel=null, recognizer=null, audioCtx=null, procNode=null, micStream=null, listening=false, voiceReady=false;
-function micHint(t){ $("#micHint").textContent=t; }
-async function preloadVoice(){
-  if(typeof Vosk==="undefined"){ $("#voiceState").textContent="voice needs internet once"; return; }
-  try{ voskModel=await Vosk.createModel(VOSK_MODEL_URL); voiceReady=true; $("#voiceState").textContent="voice ready"; $("#micBtn").classList.add("ready"); }
-  catch(e){ $("#voiceState").textContent="voice unavailable"; }
+/* ---- free offline voice (vosk-browser), local-first with timeout & retry ---- */
+const MODEL_SOURCES=[
+  "vendor/model.tar.gz",                                                                  // bundled: instant, offline
+  "https://ccoreilly.github.io/vosk-browser/models/vosk-model-small-en-us-0.15.tar.gz",   // fallback
+  "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.tar.gz"                // fallback
+];
+const LOAD_TIMEOUT_MS=45000;
+let voskModel=null, recognizer=null, audioCtx=null, procNode=null, micStream=null;
+let listening=false, voiceReady=false, voiceLoading=false;
+
+function micHint(t){ $("#micHint").textContent=t||""; }
+function voiceState(text,cls){
+  const el=$("#voiceState");
+  el.textContent=text;
+  el.className=cls||"vr";
 }
+function withTimeout(promise,ms,label){
+  return Promise.race([
+    promise,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error(label||"timed out")),ms))
+  ]);
+}
+async function loadVoice(){
+  if(voiceReady||voiceLoading) return voiceReady;
+  if(typeof Vosk==="undefined"){ voiceState("voice engine missing","vr err"); return false; }
+  voiceLoading=true;
+  for(const src of MODEL_SOURCES){
+    const localTry=!/^https?:/i.test(src);
+    voiceState(localTry?"loading voice...":"downloading voice model...");
+    try{
+      voskModel=await withTimeout(Vosk.createModel(src),LOAD_TIMEOUT_MS,"voice model timed out");
+      voiceReady=true; voiceLoading=false;
+      voiceState("voice ready"); $("#micBtn").classList.add("ready");
+      return true;
+    }catch(e){ /* try next source */ }
+  }
+  voiceLoading=false;
+  voiceState("voice unavailable · retry","vr err");
+  return false;
+}
+// clicking the status retries
+$("#voiceState").style.cursor="pointer";
+$("#voiceState").onclick=()=>{ if(!voiceReady&&!voiceLoading){ voskModel=null; loadVoice(); } };
+
 async function startListen(){
-  if(!voiceReady){ micHint("loading voice..."); await preloadVoice(); if(!voiceReady) return; }
+  if(!voiceReady){ const ok=await loadVoice(); if(!ok) return; }
   micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,channelCount:1}});
   audioCtx=new AudioContext();
   recognizer=new voskModel.KaldiRecognizer(audioCtx.sampleRate);
@@ -100,7 +135,10 @@ function stopListen(){
   try{micStream&&micStream.getTracks().forEach(t=>t.stop());}catch{} try{recognizer&&recognizer.remove();}catch{}
   recognizer=null; audioCtx=null; procNode=null; micStream=null;
 }
-function toggleVoice(){ if(listening) stopListen(); else startListen().catch(e=>{micHint("mic blocked");setTimeout(()=>micHint(""),2000);}); }
+function toggleVoice(){
+  if(listening){ stopListen(); return; }
+  startListen().catch(e=>{ micHint(String(e.message||e).slice(0,40)); setTimeout(()=>micHint(""),2500); });
+}
 $("#micBtn").onclick=toggleVoice;
 $("#listenBtn").onclick=toggleVoice;
 
