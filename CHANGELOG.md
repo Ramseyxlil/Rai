@@ -2,6 +2,13 @@
 
 All notable changes to Rai are documented here.
 
+## [0.5.0]
+- Split into two windows: the floating **Assistant** command bar (the product) and the **Home** dashboard (settings, modes, history)
+- Home can be closed while the assistant keeps running
+- Professional SVG icons throughout (no emojis)
+- Free offline voice preloads at launch (vosk-browser), removed the old key-based transcription
+- Tray, quit, and launch flows updated for the two-window model
+
 ## [0.4.0]
 - Free, offline voice input via vosk-browser (no key, no cost)
 - Auto-update from GitHub releases, checked on every launch

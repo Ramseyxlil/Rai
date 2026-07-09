@@ -8,7 +8,7 @@ use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, LogicalSize, Manager, WebviewWindow,
+    AppHandle, Emitter, LogicalSize, Manager, WebviewWindow, WindowEvent,
 };
 use tauri_plugin_global_shortcut::{Modifiers, ShortcutState};
 
@@ -16,17 +16,16 @@ use tauri_plugin_global_shortcut::{Modifiers, ShortcutState};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
-    pub active: String, // "claude" | "openai" | "foundry"
+    pub active: String,
     pub claude: ProviderCfg,
     pub openai: ProviderCfg,
     pub foundry: ProviderCfg,
     pub start_invisible: bool,
     pub screen_by_default: bool,
-    pub opacity: u32,      // 60..=100
-    pub mode: String,      // active mode id
+    pub opacity: u32,
+    pub mode: String,
     pub custom_prompt: String,
-    pub width: u32,
-    pub height: u32,
+    pub launch_on_startup: bool,
 }
 
 impl Default for Settings {
@@ -41,8 +40,7 @@ impl Default for Settings {
             opacity: 92,
             mode: "general".into(),
             custom_prompt: String::new(),
-            width: 460,
-            height: 600,
+            launch_on_startup: false,
         }
     }
 }
@@ -66,8 +64,6 @@ fn write_settings(s: &Settings) -> Result<(), String> {
     let data = serde_json::to_string_pretty(s).map_err(|e| e.to_string())?;
     std::fs::write(settings_path(), data).map_err(|e| e.to_string())
 }
-
-// ------------------------- runtime state -------------------------
 
 struct AppState { invisible: AtomicBool }
 
@@ -93,20 +89,34 @@ fn apply_affinity(_window: &WebviewWindow, _on: bool) -> Result<(), String> { Ok
 
 // ------------------------- helpers -------------------------
 
-fn main_window(app: &AppHandle) -> Option<WebviewWindow> { app.get_webview_window("main") }
-fn show_and_focus(app: &AppHandle) {
-    if let Some(w) = main_window(app) { let _ = w.show(); let _ = w.set_focus(); }
-}
-fn toggle_window(app: &AppHandle) {
-    if let Some(w) = main_window(app) {
-        if w.is_visible().unwrap_or(false) { let _ = w.hide(); }
-        else { let _ = w.show(); let _ = w.set_focus(); }
+fn win(app: &AppHandle, label: &str) -> Option<WebviewWindow> { app.get_webview_window(label) }
+fn assistant(app: &AppHandle) -> Option<WebviewWindow> { win(app, "assistant") }
+fn home(app: &AppHandle) -> Option<WebviewWindow> { win(app, "home") }
+
+fn show_home(app: &AppHandle) { if let Some(w) = home(app) { let _ = w.show(); let _ = w.unminimize(); let _ = w.set_focus(); } }
+
+fn launch_assistant_inner(app: &AppHandle) {
+    if let Some(w) = assistant(app) {
+        let inv = load_settings().start_invisible;
+        let _ = apply_affinity(&w, inv);
+        app.state::<AppState>().invisible.store(inv, Ordering::Relaxed);
+        let _ = w.show();
+        let _ = w.set_focus();
+        let _ = app.emit("invisible-changed", inv);
     }
 }
+
+fn toggle_assistant(app: &AppHandle) {
+    if let Some(w) = assistant(app) {
+        if w.is_visible().unwrap_or(false) { let _ = w.hide(); }
+        else { launch_assistant_inner(app); }
+    }
+}
+
 fn toggle_invisible(app: &AppHandle) {
     let state = app.state::<AppState>();
     let next = !state.invisible.load(Ordering::Relaxed);
-    if let Some(w) = main_window(app) {
+    if let Some(w) = assistant(app) {
         if apply_affinity(&w, next).is_ok() {
             state.invisible.store(next, Ordering::Relaxed);
             let _ = app.emit("invisible-changed", next);
@@ -119,28 +129,34 @@ fn toggle_invisible(app: &AppHandle) {
 #[tauri::command] fn get_settings() -> Settings { load_settings() }
 #[tauri::command] fn save_settings(settings: Settings) -> Result<(), String> { write_settings(&settings) }
 
-#[tauri::command]
-fn set_invisible(window: WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
-    apply_affinity(&window, on)?;
-    app.state::<AppState>().invisible.store(on, Ordering::Relaxed);
-    let _ = app.emit("invisible-changed", on);
-    Ok(())
-}
-#[tauri::command] fn get_invisible(app: AppHandle) -> bool { app.state::<AppState>().invisible.load(Ordering::Relaxed) }
-#[tauri::command] fn hide_window(window: WebviewWindow) { let _ = window.hide(); }
-#[tauri::command] fn center_window(window: WebviewWindow) { let _ = window.center(); }
+#[tauri::command] fn launch_assistant(app: AppHandle) { launch_assistant_inner(&app); }
+#[tauri::command] fn open_home(app: AppHandle) { show_home(&app); }
+#[tauri::command] fn close_home(app: AppHandle) { if let Some(w) = home(&app) { let _ = w.hide(); } }
+#[tauri::command] fn hide_assistant(app: AppHandle) { if let Some(w) = assistant(&app) { let _ = w.hide(); } }
 #[tauri::command] fn quit_app(app: AppHandle) { app.exit(0); }
 
 #[tauri::command]
-fn set_size(window: WebviewWindow, width: f64, height: f64) -> Result<(), String> {
-    window.set_size(LogicalSize::new(width, height)).map_err(|e| e.to_string())
+fn set_invisible(app: AppHandle, on: bool) -> Result<(), String> {
+    if let Some(w) = assistant(&app) {
+        apply_affinity(&w, on)?;
+        app.state::<AppState>().invisible.store(on, Ordering::Relaxed);
+        let _ = app.emit("invisible-changed", on);
+    }
+    Ok(())
+}
+#[tauri::command] fn get_invisible(app: AppHandle) -> bool { app.state::<AppState>().invisible.load(Ordering::Relaxed) }
+
+#[tauri::command]
+fn set_window_size(app: AppHandle, label: String, width: f64, height: f64) -> Result<(), String> {
+    if let Some(w) = win(&app, &label) {
+        w.set_size(LogicalSize::new(width, height)).map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
-/// Ask the active provider. Optional screenshot (vision) and optional system prompt (mode).
 #[tauri::command]
 async fn ask(
     app: AppHandle,
-    window: WebviewWindow,
     prompt: String,
     use_screen: bool,
     system: Option<String>,
@@ -148,11 +164,15 @@ async fn ask(
     let s = load_settings();
     let image: Option<String> = if use_screen {
         let prev = app.state::<AppState>().invisible.load(Ordering::Relaxed);
-        let _ = apply_affinity(&window, true);
-        std::thread::sleep(Duration::from_millis(45));
-        let shot = screen::capture_screen_png_b64();
-        let _ = apply_affinity(&window, prev);
-        Some(shot?)
+        if let Some(w) = assistant(&app) {
+            let _ = apply_affinity(&w, true);
+            std::thread::sleep(Duration::from_millis(45));
+            let shot = screen::capture_screen_png_b64();
+            let _ = apply_affinity(&w, prev);
+            Some(shot?)
+        } else {
+            Some(screen::capture_screen_png_b64()?)
+        }
     } else { None };
 
     let system = system.unwrap_or_else(|| "You are Rai, a calm, concise on-screen assistant. Answer directly and briefly. When a screenshot is provided, read it carefully and ground your answer in exactly what is on screen.".to_string());
@@ -164,14 +184,6 @@ async fn ask(
     }
 }
 
-/// Voice: transcribe recorded audio (base64) via the OpenAI Whisper endpoint.
-#[tauri::command]
-async fn transcribe(audio_b64: String, mime: String) -> Result<String, String> {
-    let s = load_settings();
-    providers::transcribe_openai(&s.openai, &audio_b64, &mime).await
-}
-
-// history ------------------------------------------------------------
 #[tauri::command]
 fn get_history() -> serde_json::Value {
     match std::fs::read_to_string(history_path()) {
@@ -185,17 +197,13 @@ fn save_history(history: serde_json::Value) -> Result<(), String> {
     std::fs::write(history_path(), data).map_err(|e| e.to_string())
 }
 
-// auto-update --------------------------------------------------------
 #[tauri::command]
 async fn check_update(app: AppHandle) -> Result<String, String> {
     use tauri_plugin_updater::UpdaterExt;
     let updater = app.updater().map_err(|e| format!("Updater not configured: {e}"))?;
     match updater.check().await {
         Ok(Some(update)) => {
-            update
-                .download_and_install(|_chunk, _total| {}, || {})
-                .await
-                .map_err(|e| format!("Update failed: {e}"))?;
+            update.download_and_install(|_c, _t| {}, || {}).await.map_err(|e| format!("Update failed: {e}"))?;
             Ok("updated".into())
         }
         Ok(None) => Ok("latest".into()),
@@ -214,35 +222,48 @@ pub fn run() {
             if event.state != ShortcutState::Pressed { return; }
             let m = Modifiers::CONTROL | Modifiers::SHIFT;
             use tauri_plugin_global_shortcut::Code;
-            if shortcut.matches(m, Code::Space) { toggle_window(app); }
+            if shortcut.matches(m, Code::Space) { toggle_assistant(app); }
             else if shortcut.matches(m, Code::KeyH) { toggle_invisible(app); }
         })
         .build();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| { show_and_focus(app); }))
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| { show_home(app); }))
         .plugin(shortcuts)
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(AppState { invisible: AtomicBool::new(false) })
         .invoke_handler(tauri::generate_handler![
-            get_settings, save_settings, set_invisible, get_invisible,
-            hide_window, center_window, quit_app, set_size,
-            ask, transcribe, get_history, save_history, check_update
+            get_settings, save_settings,
+            launch_assistant, open_home, close_home, hide_assistant, quit_app,
+            set_invisible, get_invisible, set_window_size,
+            ask, get_history, save_history, check_update
         ])
+        // Closing Home or Assistant hides them instead of destroying — Quit fully exits.
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                let label = window.label().to_string();
+                if label == "home" || label == "assistant" {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .setup(|app| {
             let handle = app.handle().clone();
 
-            let show = MenuItem::with_id(app, "show", "Show Rai", true, None::<&str>)?;
-            let invis = MenuItem::with_id(app, "invis", "Toggle invisibility", true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "Quit Rai", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show, &invis, &quit])?;
+            let m_home = MenuItem::with_id(app, "home", "Open Home", true, None::<&str>)?;
+            let m_launch = MenuItem::with_id(app, "launch", "Launch Rai (assistant)", true, None::<&str>)?;
+            let m_invis = MenuItem::with_id(app, "invis", "Toggle invisibility", true, None::<&str>)?;
+            let m_quit = MenuItem::with_id(app, "quit", "Quit Rai", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&m_home, &m_launch, &m_invis, &m_quit])?;
 
             let mut builder = TrayIconBuilder::new()
-                .tooltip("Rai — click to open")
+                .tooltip("Rai — click for Home")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
-                    "show" => show_and_focus(app),
+                    "home" => show_home(app),
+                    "launch" => launch_assistant_inner(app),
                     "invis" => toggle_invisible(app),
                     "quit" => app.exit(0),
                     _ => {}
@@ -250,21 +271,13 @@ pub fn run() {
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
                         button: MouseButton::Left, button_state: MouseButtonState::Up, ..
-                    } = event { show_and_focus(tray.app_handle()); }
+                    } = event { show_home(tray.app_handle()); }
                 });
             if let Some(icon) = app.default_window_icon() { builder = builder.icon(icon.clone()); }
             builder.build(app)?;
 
-            let s = load_settings();
-            if let Some(w) = main_window(&handle) {
-                let _ = w.set_size(LogicalSize::new(s.width as f64, s.height as f64));
-                if s.start_invisible {
-                    let _ = apply_affinity(&w, true);
-                    app.state::<AppState>().invisible.store(true, Ordering::Relaxed);
-                }
-                let _ = w.show();
-                let _ = w.set_focus();
-            }
+            // On launch: show Home. Assistant starts hidden until launched.
+            show_home(&handle);
             Ok(())
         })
         .run(tauri::generate_context!())

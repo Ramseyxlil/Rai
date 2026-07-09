@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rai</title>
+<script src="https://cdn.jsdelivr.net/npm/vosk-browser@0.0.8/dist/vosk.js"></script>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="assistant-app">
+    <div class="abar" data-tauri-drag-region>
+      <span class="drop"></span><span class="wm">rai</span>
+      <button class="listen" id="listenBtn" title="Voice"></button>
+      <div class="actions">
+        <button class="ic" id="screenBtn" title="See screen"></button>
+        <button class="ic" id="eyeBtn" title="Invisibility (Ctrl+Shift+H)"></button>
+        <button class="ic" id="homeBtn" title="Open Home"></button>
+        <button class="ic" id="hideBtn" title="Hide (Ctrl+Shift+Space)"></button>
+        <button class="ic" id="moreBtn" title="More"></button>
+        <div class="menu" id="moreMenu">
+          <button id="mHome"></button>
+          <button id="mScreen"></button>
+          <div class="sep"></div>
+          <button id="mQuit" class="danger"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="abody empty" id="body">
+      <div class="hintrow" id="idle"><b>Ask Rai, or just speak.</b><br/>It reads your screen when you need it and stays hidden from your call.</div>
+      <div class="thread" id="thread" style="display:none"></div>
+    </div>
+
+    <div class="aask">
+      <button class="micbtn" id="micBtn" title="Talk"></button>
+      <input id="ask" placeholder="Ask Rai, or speak..." autocomplete="off" />
+      <button class="send" id="sendBtn" title="Send"></button>
+    </div>
+    <div class="ahints">
+      <span class="kbd">Enter</span><span>ask</span>
+      <span id="micHint"></span>
+      <span style="flex:1"></span>
+      <span class="vr" id="voiceState">voice loading...</span>
+    </div>
+  </div>
+  <script src="shared.js"></script>
+  <script src="assistant.js"></script>
+</body>
+</html>

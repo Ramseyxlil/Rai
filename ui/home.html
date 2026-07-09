@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rai — Home</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="home-app">
+    <div class="titlebar" data-tauri-drag-region>
+      <span class="drop"></span><span class="wm">rai · Home</span>
+      <button class="launch-mini" id="launchMini"></button>
+      <div class="winctl">
+        <button id="minBtn" title="Minimize"></button>
+        <button class="close" id="closeBtn" title="Close (assistant keeps running)"></button>
+      </div>
+    </div>
+
+    <div class="home-inner">
+      <div class="rail">
+        <button class="active" data-view="modes" id="rModes" title="Modes"></button>
+        <button data-view="history" id="rHistory" title="History"></button>
+        <button data-view="settings" id="rSettings" title="Settings"></button>
+        <span class="sp"></span>
+        <button class="quit" id="rQuit" title="Quit Rai"></button>
+      </div>
+
+      <div class="main">
+        <!-- MODES -->
+        <div class="view active" data-panel="modes">
+          <div class="h1">Ready when you are</div>
+          <div class="sub">Pick a mode, then launch Rai over whatever you're doing.</div>
+          <div class="seclabel">Mode</div>
+          <div class="modegrid" id="modegrid"></div>
+          <button class="launch" id="launchBig"></button>
+        </div>
+
+        <!-- HISTORY -->
+        <div class="view" data-panel="history">
+          <div class="h1">History</div>
+          <div class="sub">Saved locally on your device.</div>
+          <div id="histList"></div>
+          <div class="hint" id="histEmpty" style="display:none">Nothing yet. Your questions and answers show up here.</div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div class="view" data-panel="settings">
+          <div class="h1">Settings</div>
+          <div class="sub">Everything lives here. The assistant just runs what you set.</div>
+
+          <div class="seclabel">Your models · bring your own key</div>
+          <div class="prov" data-prov="claude">
+            <div class="ptop"><div class="plogo claude">A</div><div><div class="pname">Claude</div><div class="psub">Anthropic API · vision</div></div><button class="choose">Set active</button></div>
+            <label>API key</label><div class="in"><input type="password" data-k="claude.api_key" placeholder="sk-ant-..." /><button class="rev">show</button></div>
+            <label>Model</label><div class="in"><input data-k="claude.model" list="cm" placeholder="claude-sonnet-4-6" /></div>
+            <datalist id="cm"><option>claude-sonnet-4-6</option><option>claude-opus-4-8</option><option>claude-haiku-4-5</option></datalist>
+          </div>
+          <div class="prov" data-prov="openai">
+            <div class="ptop"><div class="plogo openai">O</div><div><div class="pname">OpenAI</div><div class="psub">OpenAI API · vision</div></div><button class="choose">Set active</button></div>
+            <label>API key</label><div class="in"><input type="password" data-k="openai.api_key" placeholder="sk-..." /><button class="rev">show</button></div>
+            <label>Model</label><div class="in"><input data-k="openai.model" list="om" placeholder="gpt-4o" /></div>
+            <datalist id="om"><option>gpt-4o</option><option>gpt-4o-mini</option><option>gpt-5</option></datalist>
+          </div>
+          <div class="prov" data-prov="foundry">
+            <div class="ptop"><div class="plogo foundry">MF</div><div><div class="pname">Microsoft Foundry</div><div class="psub">Azure · /openai/v1</div></div><button class="choose">Set active</button></div>
+            <label>Endpoint</label><div class="in"><input data-k="foundry.endpoint" placeholder="https://your-resource.openai.azure.com" /></div>
+            <label>Deployment</label><div class="in"><input data-k="foundry.deployment" placeholder="gpt-4o" /></div>
+            <label>API key</label><div class="in"><input type="password" data-k="foundry.api_key" placeholder="azure key" /><button class="rev">show</button></div>
+          </div>
+
+          <div class="seclabel">Mode prompt</div>
+          <label class="hint">Custom mode prompt</label>
+          <div class="in"><textarea data-k="custom_prompt" rows="2" placeholder="You are Rai, my personal..."></textarea></div>
+
+          <div class="seclabel">Behaviour</div>
+          <div class="togrow"><span class="tx"><span class="tt">Invisible on screen share</span><span class="td">Assistant hidden from Zoom, Teams, OBS on launch.</span></span><span class="sw" id="swInvisible"></span></div>
+          <div class="togrow"><span class="tx"><span class="tt">Launch on startup</span><span class="td">Start Rai when Windows boots.</span></span><span class="sw" id="swStartup"></span></div>
+          <div class="togrow"><span class="tx"><span class="tt">See screen on every question</span><span class="td">Attach a screenshot to each ask.</span></span><span class="sw" id="swScreen"></span></div>
+
+          <div class="seclabel">Voice</div>
+          <div class="hint">Voice is free and offline. Rai transcribes your speech on-device with Vosk. No key, no cost. The small English model loads once when the assistant starts, then stays ready.</div>
+
+          <div class="seclabel">Assistant size &amp; opacity</div>
+          <div class="togrow"><span class="tx"><span class="tt">Panel opacity</span></span><input type="range" class="range" id="opacity" min="60" max="100" value="92" /></div>
+          <div class="sizerow">
+            <div class="in mini-in"><input type="number" id="wIn" min="380" placeholder="480" /></div>
+            <span class="x">x</span>
+            <div class="in mini-in"><input type="number" id="hIn" min="120" placeholder="300" /></div>
+            <button class="ghost" id="applySize">Apply size</button>
+          </div>
+
+          <div class="seclabel">Updates</div>
+          <div class="togrow"><span class="tx"><span class="tt">Auto-update</span><span class="td" id="updMsg">Rai checks GitHub on launch. Check manually here.</span></span><button class="ghost" id="updBtn">Check now</button></div>
+
+          <div class="seclabel">App</div>
+          <div class="togrow"><span class="tx"><span class="tt">Quit Rai completely</span><span class="td">Closes the assistant and Home.</span></span><button class="quit-btn" id="quitBtn">Quit</button></div>
+
+          <div class="save-fab"><button class="btn" id="saveBtn">Save settings</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="shared.js"></script>
+  <script src="home.js"></script>
+</body>
+</html>

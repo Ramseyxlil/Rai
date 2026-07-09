@@ -1,14 +1,21 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Core permissions for the Rai overlay window.",
-  "windows": ["main"],
+  "description": "Permissions for the Rai assistant overlay and Home dashboard.",
+  "windows": [
+    "assistant",
+    "home"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-show",
     "core:window:allow-hide",
+    "core:window:allow-close",
     "core:window:allow-set-focus",
     "core:window:allow-start-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-set-size",
+    "core:window:allow-center",
     "core:event:default"
   ]
 }

@@ -1,6 +1,6 @@
 [package]
 name = "rai"
-version = "0.3.0"
+version = "0.5.0"
 description = "Rai — your quiet second mind. An invisible, configurable desktop assistant that sees your screen and hears your calls."
 authors = ["Abdulrafiu Izuafa"]
 edition = "2021"

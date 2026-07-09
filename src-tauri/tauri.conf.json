@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Rai",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "identifier": "app.rai.overlay",
   "build": {
     "frontendDist": "../ui"
@@ -10,18 +10,39 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "label": "main",
+        "label": "assistant",
         "title": "Rai",
-        "width": 460,
-        "height": 600,
-        "minWidth": 360,
-        "minHeight": 420,
+        "url": "assistant.html",
+        "width": 480,
+        "height": 300,
+        "minWidth": 380,
+        "minHeight": 120,
         "resizable": true,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "shadow": false,
+        "center": false,
+        "x": 420,
+        "y": 40,
+        "visible": false,
+        "focus": true
+      },
+      {
+        "label": "home",
+        "title": "Rai \u2014 Home",
+        "url": "home.html",
+        "width": 880,
+        "height": 620,
+        "minWidth": 640,
+        "minHeight": 480,
+        "resizable": true,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "shadow": true,
         "center": true,
         "visible": false,
         "focus": true
