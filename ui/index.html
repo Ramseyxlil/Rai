@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rai</title>
+<script src="https://cdn.jsdelivr.net/npm/vosk-browser@0.0.8/dist/vosk.js"></script>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="rai" id="rai">
+    <header class="rhead" data-tauri-drag-region>
+      <span class="drop" title="Rai"></span>
+      <span class="wm">rai</span>
+      <button class="pill mode" id="modePill" title="Change mode"><span id="modeText">General</span></button>
+      <button class="pill" id="providerPill" title="Switch provider"><span class="sw" id="pillSw"></span><span id="pillText">Claude</span></button>
+      <div class="actions">
+        <button class="ic" id="eyeBtn" title="Invisibility (Ctrl+Shift+H)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        <button class="ic" id="gearBtn" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V10a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
+        <button class="ic" id="closeBtn" title="Hide (Ctrl+Shift+Space)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-view="home">Home</button>
+      <button class="tab" data-view="chat">Ask</button>
+      <button class="tab" data-view="history">History</button>
+    </nav>
+
+    <!-- HOME -->
+    <main class="view home active" id="view-home">
+      <div class="hi">Hello. What are we doing?</div>
+      <div class="modecard">
+        <div class="mc-top"><span class="mc-label">Mode</span><button class="mc-change" id="mcChange">Change</button></div>
+        <div class="mc-name" id="mcName">General</div>
+        <div class="mc-desc" id="mcDesc">A calm, all-purpose assistant.</div>
+      </div>
+      <div class="qa-label">Quick actions</div>
+      <div class="qa" id="quickActions"></div>
+      <div class="statusrow" id="statusRow"></div>
+
+      <div class="support">
+        <div class="sup-h">Rai is free and made by one person.</div>
+        <p>Help, support, collaborations, or donations, reach out any time.</p>
+        <div class="sup-mails">
+          <a class="mail" id="mail1">abdulrafiu@izusoft.tech</a>
+          <a class="mail" id="mail2">abdulrafiu@azurelearnai.org</a>
+        </div>
+        <button class="oss">Will be open source soon</button>
+      </div>
+    </main>
+
+    <!-- CHAT -->
+    <main class="view chat" id="view-chat">
+      <div class="idle" id="idle"><b>Ask Rai anything.</b><br />Flip <span class="mini">See screen</span> on and it reads what you're looking at. Tap the mic to talk.</div>
+      <div class="thread" id="thread"></div>
+    </main>
+
+    <!-- HISTORY -->
+    <main class="view history" id="view-history">
+      <div class="hist-top"><span>Recent</span><button class="ghost sm" id="clearHist">Clear all</button></div>
+      <div id="histList"></div>
+      <div class="hist-empty" id="histEmpty">Nothing yet. Your questions and answers will be saved here on this device.</div>
+    </main>
+
+    <footer class="rfoot" id="rfoot">
+      <div class="inrow">
+        <button class="mic" id="micBtn" title="Hold to talk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></svg></button>
+        <button class="see" id="seeBtn" title="Let Rai see your screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span>Screen</span></button>
+        <textarea id="ask" rows="1" placeholder="Ask Rai..."></textarea>
+        <button class="send" id="sendBtn" title="Send (Enter)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></svg></button>
+      </div>
+      <div class="fhint"><span id="modeHint">Visible</span><span class="dotsep">·</span><span id="screenHint">screen off</span><span id="micHint" class="mic-hint"></span><span class="sep"></span><span>Enter to send</span></div>
+    </footer>
+  </div>
+
+  <!-- MODE PICKER -->
+  <div class="scrim" id="modeScrim">
+    <div class="sheet sm-sheet">
+      <div class="shead"><span class="drop"></span><div><h2>Choose a mode</h2><p>Each mode tunes how Rai thinks and what it suggests.</p></div><button class="ic" id="closeMode">✕</button></div>
+      <div class="sbody" id="modeList"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="scrim" id="scrim">
+    <div class="sheet">
+      <div class="shead"><span class="drop"></span><div><h2>Settings</h2><p>Bring your own key. Nothing is proxied through Rai.</p></div><button class="ic" id="closeSheet">✕</button></div>
+      <div class="sbody">
+        <div class="sectlabel">Connections</div>
+        <div class="prov" data-prov="claude">
+          <div class="ptop"><div class="plogo claude">A</div><div><div class="pname">Claude</div><div class="psub">Anthropic API · vision</div></div><button class="choose">Set active</button></div>
+          <label>API key</label><div class="in"><input type="password" data-k="claude.api_key" placeholder="sk-ant-..." /><button class="rev">show</button></div>
+          <label>Model</label><div class="in"><input data-k="claude.model" list="cm" placeholder="claude-sonnet-4-6" /></div>
+          <datalist id="cm"><option>claude-sonnet-4-6</option><option>claude-opus-4-8</option><option>claude-haiku-4-5</option></datalist>
+        </div>
+        <div class="prov" data-prov="openai">
+          <div class="ptop"><div class="plogo openai">O</div><div><div class="pname">OpenAI</div><div class="psub">API · vision · voice</div></div><button class="choose">Set active</button></div>
+          <label>API key</label><div class="in"><input type="password" data-k="openai.api_key" placeholder="sk-..." /><button class="rev">show</button></div>
+          <label>Model</label><div class="in"><input data-k="openai.model" list="om" placeholder="gpt-4o" /></div>
+          <datalist id="om"><option>gpt-4o</option><option>gpt-4o-mini</option><option>gpt-5</option></datalist>
+        </div>
+        <div class="prov" data-prov="foundry">
+          <div class="ptop"><div class="plogo foundry">MF</div><div><div class="pname">Microsoft Foundry</div><div class="psub">Azure · /openai/v1</div></div><button class="choose">Set active</button></div>
+          <label>Endpoint</label><div class="in"><input data-k="foundry.endpoint" placeholder="https://your-resource.openai.azure.com" /></div>
+          <label>Deployment</label><div class="in"><input data-k="foundry.deployment" placeholder="gpt-4o" /></div>
+          <label>API key</label><div class="in"><input type="password" data-k="foundry.api_key" placeholder="azure key" /><button class="rev">show</button></div>
+        </div>
+
+        <div class="sectlabel">Mode &amp; prompt</div>
+        <div class="row"><span><b>Active mode</b><small id="setModeName">General</small></span><button class="ghost sm" id="setModeBtn">Change</button></div>
+        <label class="lbl">Custom mode prompt</label>
+        <div class="in"><textarea data-k="custom_prompt" rows="2" placeholder="You are Rai, my personal..."></textarea></div>
+
+        <div class="sectlabel">Behaviour</div>
+        <label class="row"><span><b>Start hidden from capture</b><small>Invisible to Zoom/Teams/OBS on launch.</small></span><input type="checkbox" id="startInvisible" /></label>
+        <label class="row"><span><b>See screen on every question</b><small>Attach a screenshot to each ask.</small></span><input type="checkbox" id="screenDefault" /></label>
+
+        <div class="sectlabel">Size &amp; appearance</div>
+        <div class="row"><span><b>Panel opacity</b><small id="opacityVal">92%</small></span><input type="range" id="opacity" min="60" max="100" value="92" /></div>
+        <div class="row"><span><b>Window size</b><small>Width x Height, or resize by dragging the edge.</small></span></div>
+        <div class="sizerow">
+          <div class="in mini-in"><input type="number" id="wIn" min="360" placeholder="460" /></div>
+          <span class="x">x</span>
+          <div class="in mini-in"><input type="number" id="hIn" min="420" placeholder="600" /></div>
+          <button class="ghost sm" id="applySize">Apply</button>
+        </div>
+        <div class="sizepresets">
+          <button data-w="380" data-h="520">Compact</button>
+          <button data-w="460" data-h="600">Standard</button>
+          <button data-w="560" data-h="720">Tall</button>
+          <button data-w="720" data-h="560">Wide</button>
+        </div>
+        <div class="btnrow"><button class="ghost" id="centerBtn">Center window</button></div>
+
+        <div class="sectlabel">Voice</div>
+        <div class="hintline">Voice input records your mic and transcribes it. For now it uses your OpenAI key (Whisper). Offline, key-free voice (Vosk / whisper.cpp) is on the roadmap.</div>
+
+        <div class="sectlabel">Updates</div>
+        <div class="row"><span><b>Auto-update</b><small id="updMsg">Check for the latest version.</small></span><button class="ghost sm" id="updBtn">Check now</button></div>
+
+        <div class="sectlabel">Support &amp; contact</div>
+        <div class="supbox">
+          <p>Help, collaborations, or donations:</p>
+          <a class="mail" id="mail3">abdulrafiu@izusoft.tech</a>
+          <a class="mail" id="mail4">abdulrafiu@azurelearnai.org</a>
+          <button class="oss">Will be open source soon</button>
+        </div>
+
+        <div class="sectlabel danger">Danger</div>
+        <div class="btnrow"><button class="quit" id="quitBtn">Quit Rai completely</button></div>
+      </div>
+      <div class="sfoot"><span class="note">Keys stored locally on this device only.</span><button class="btn" id="saveBtn">Save</button></div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>

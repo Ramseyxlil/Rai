@@ -1,0 +1,20 @@
+# Rust / Tauri
+/src-tauri/target/
+/src-tauri/gen/schemas/
+**/*.rs.bk
+
+# Signing keys — NEVER commit these
+*.key
+*.key.pub
+rai.key*
+
+# Local settings that may contain API keys
+settings.json
+history.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+node_modules/
